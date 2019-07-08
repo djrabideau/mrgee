@@ -1,0 +1,14 @@
+Package: mrgee
+Type: Package
+Title: Multiply Robust Generalized Estimating Equations
+Version: 0.0.0.9000
+Authors@R: person("Dustin", "Rabideau", email = "djrabideau@g.harvard.edu",
+    role = c("aut", "cre"))
+Description: This package is used to implement mutliply robust generalized
+    estimating equations (MR-GEE) to handle missing outcomes. MR-GEE combines
+    multiple propensity score models and multiple outcome regression
+    models into one estimation framework.
+Depends: R (>= 3.4.1)
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
