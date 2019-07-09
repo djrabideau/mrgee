@@ -12,3 +12,8 @@ Depends: R (>= 3.4.1)
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
+Imports:
+    stats,
+    gee,
+    geepack
+RoxygenNote: 6.1.1
