@@ -17,8 +17,9 @@
 #' @param maxit maximum number of iterations for algorithm; default
 #' \code{maxit=100}
 #' @param eps convergence criterion for algorithm; default \code{eps=10e-8}
+#' @param quietly logical; if F, convergence info for each step is printed
 #' @export
-modNR <- function(ghat, r, maxit = 100, eps = 10e-8) {
+modNR <- function(ghat, r, maxit = 100, eps = 10e-8, quietly = T) {
   call <- match.call()
   N <- length(r)
   M <- sum(r)
@@ -52,8 +53,9 @@ modNR <- function(ghat, r, maxit = 100, eps = 10e-8) {
     }
     delta2 <- solve(-sumouter) %*% delta1
 
-    # print(paste0('step ', j, ', norm = ', norm(delta2, type = 'F')))
-    if (norm(delta2, type = 'F') < eps) {
+    if (!quietly)
+      print(paste0('step ', j, ', norm = ', base::norm(delta2, type = 'F')))
+    if (base::norm(delta2, type = 'F') < eps) {
       converged <- T
       break
     }

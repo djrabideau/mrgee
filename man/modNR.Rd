@@ -4,7 +4,7 @@
 \alias{modNR}
 \title{Modified Newton-Raphson}
 \usage{
-modNR(ghat, r, maxit = 100, eps = 1e-07)
+modNR(ghat, r, maxit = 100, eps = 1e-07, quietly = T)
 }
 \arguments{
 \item{ghat}{a \eqn{(J + 2L) x N} matrix, where \eqn{J} is the number of
@@ -20,6 +20,8 @@ their outcome observed (1) or missing (0). Order must correspond to rows in
 \code{maxit=100}}
 
 \item{eps}{convergence criterion for algorithm; default \code{eps=10e-8}}
+
+\item{quietly}{logical; if F, convergence info for each step is printed}
 }
 \description{
 Carries out modified Newton-Raphson algorithm to solve for \eqn{\rho} for
