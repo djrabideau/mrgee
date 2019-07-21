@@ -78,7 +78,9 @@ modNR <- function(ghat, r, maxit = 100, eps = 10e-8, quietly = T) {
     # step 3
     rhohat <- rhohat - delta
     s <- s + 1
-    tau <- 1 / sqrt(s)
+    # tau <- 1 / sqrt(s) # need this for convergence proof
+    tau <- 1 # "numerical behavior not affected with this instead" - Han (2014)
+            # also seems to converge faster with tau <- 1
   }
 
   if (!converged)
