@@ -15,5 +15,6 @@ LazyData: true
 Imports:
     stats,
     gee,
-    geepack
+    geepack,
+    geeM
 RoxygenNote: 6.1.1

@@ -11,16 +11,16 @@ mrgee(formula, family = gaussian, data, id, corstr, pmodels, bmodels,
 \item{formula}{an object of class "\code{\link[stats]{formula}}"
 (or one that can be coerced to that class): a symbolic description of the
 model to be fitted. This argument is passed to
-\code{\link[geepack]{geeglm}}}
+\code{\link[geeM]{geem}}}
 
 \item{family}{a description of the error distribution and link function to
 be used in the model. This can be a character string naming a family
 function, a family function or the result of a call to a family function.
-This argument is passed to \code{\link[geepack]{geeglm}}. See
+This argument is passed to \code{\link[geeM]{geem}}. See
 \code{\link[stats]{family}} for details.}
 
 \item{data}{a data frame containing the variables in the model. This argument
-is passed to \code{\link[geepack]{geeglm}}}
+is passed to \code{\link[geeM]{geem}}}
 
 \item{id}{a vector which identifies the clusters. The length of \code{id}
 should be the same as the number of observations. Data are assumed to be
@@ -50,5 +50,8 @@ empirical maximum likelihood to handle missing outcomes.
 \details{
 This function inputs a model formula as well as lists of propensity score
 models and outcome regression models to carry out MR-GEE. It outputs model
-fit information including empirical MLEs for the coefficients.
+fit information including empirical MLEs for the coefficients. The weighted
+GEE is fit using \code{\link[geeM]{geem}}, which ensures consistency of this
+weighted estimator, rather than the conventional  implementation in PROC
+GENMOD for example.
 }

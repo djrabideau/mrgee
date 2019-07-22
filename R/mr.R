@@ -5,19 +5,22 @@
 #'
 #' This function inputs a model formula as well as lists of propensity score
 #' models and outcome regression models to carry out MR-GEE. It outputs model
-#' fit information including empirical MLEs for the coefficients.
+#' fit information including empirical MLEs for the coefficients. The weighted
+#' GEE is fit using \code{\link[geeM]{geem}}, which ensures consistency of this
+#' weighted estimator, rather than the conventional  implementation in PROC
+#' GENMOD for example.
 #'
 #' @param formula an object of class "\code{\link[stats]{formula}}"
 #'     (or one that can be coerced to that class): a symbolic description of the
 #'     model to be fitted. This argument is passed to
-#'     \code{\link[geepack]{geeglm}}
+#'     \code{\link[geeM]{geem}}
 #' @param family a description of the error distribution and link function to
 #'     be used in the model. This can be a character string naming a family
 #'     function, a family function or the result of a call to a family function.
-#'     This argument is passed to \code{\link[geepack]{geeglm}}. See
+#'     This argument is passed to \code{\link[geeM]{geem}}. See
 #'     \code{\link[stats]{family}} for details.
 #' @param data a data frame containing the variables in the model. This argument
-#'     is passed to \code{\link[geepack]{geeglm}}
+#'     is passed to \code{\link[geeM]{geem}}
 #' @param id a vector which identifies the clusters. The length of \code{id}
 #'     should be the same as the number of observations. Data are assumed to be
 #'     sorted so that observations on a cluster are contiguous rows for all
@@ -101,7 +104,7 @@ mrgee <- function(formula, family = gaussian, data, id, corstr, pmodels,
     sink()
 
     betahats <- coef(or)
-    orhat <- as.vector(or$fitted.values)
+    orhat <- as.vector(fitted.values(or))
     Vk <- or$scale * or$working.correlation # need to generalize this
     zetahat <- matrix(NA, nrow = length(betahats), ncol = K)
     Uhat <- matrix(NA, nrow = length(betahats), ncol = N)
@@ -124,12 +127,12 @@ mrgee <- function(formula, family = gaussian, data, id, corstr, pmodels,
   modNR_results <- modNR(ghat, r, ...)
   rhohat <- modNR_results$rhohat
 
-  # weighted linear model
+  # weighted GEE
   w <- data$w <- as.vector((1 / M) * (1 / (1 + t(rhohat) %*% ghat))) * r
   sumw <- sum(w) # should sum to 1
 
-  fit_mr <- geeglm(formula, family = family, data = data, id = id,
-                   corstr = corstr, weights = w)
+  fit_mr <- geeM::geem(formula = formula, family = family, data = data, id = id,
+                       corstr = corstr, weights = w)
   coefmr <- coef(fit_mr)
 
   out <- list(
