@@ -105,19 +105,16 @@ mrgee <- function(formula, family = gaussian, data, id, corstr, pmodels,
 
     betahats <- coef(or)
     orhat <- as.vector(fitted.values(or))
-    Vk <- or$scale * or$working.correlation # need to generalize this
-    zetahat <- matrix(NA, nrow = length(betahats), ncol = K)
+    Vk <- or$scale * or$working.correlation # need to generalize this beyond exchangeable, equal clus sizes
     Uhat <- matrix(NA, nrow = length(betahats), ncol = N)
     for (k in 1:K) {
       ind <- which(id == k)
       datatmp <- data[ind, ]
       difftmp <- (ahat - orhat)[ind]
-      Dk <- model.matrix.lm(formulatmp, data = datatmp)
-      zetahat[, k] <- t(Dk) %*% solve(Vk) %*% difftmp
+      Dk <- model.matrix.lm(formulatmp, data = datatmp) # need to generalize this beyond Dk = Xk
       Uhat[, ind] <- t(Dk) %*% solve(Vk) %*% diag(difftmp)
     }
-    # etahat <- (1 / N) * apply(zetahat, 1, sum) # if N^{-1} for eta terms
-    etahat <- apply(zetahat, 1, mean) # if K^{-1} for eta terms
+    etahat <- apply(Uhat, 1, mean)
     Uhats_c[rowStart:rowEnd, ] <- Uhat - etahat
   }
 
