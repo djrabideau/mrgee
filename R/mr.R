@@ -40,6 +40,15 @@
 #' @export
 mrgee <- function(formula, family = gaussian, data, id, corstr, pmodels,
                   bmodels, ...) {
+  if (is.character(family)) {
+      famret <- get(family, mode = "function", envir = parent.frame())
+  } else if (is.function(family)) {
+      famret <- family()
+  } else if (is.null(family$family)) {
+      print(family)
+      stop("'family' not recognized")
+  }
+
   # errors/warnings
   if (corstr != 'exchangeable')
     stop('Currently only works with corstr = "exchangeable"')
@@ -61,7 +70,8 @@ mrgee <- function(formula, family = gaussian, data, id, corstr, pmodels,
   data$id <- id
 
   N <- nrow(data) # total number of observations
-  K <- length(unique(id)) # total number of clusters
+  ids <- unique(id) # unique cluster ids
+  K <- length(ids) # total number of clusters
   mf <- model.frame(formula, data, na.action = na.pass)
   y <- mf[, 1] # outcome vector
   r <- as.numeric(!is.na(y)) # observance indicator
@@ -91,28 +101,34 @@ mrgee <- function(formula, family = gaussian, data, id, corstr, pmodels,
     bmf <- model.frame(bmodel$terms, data = data, na.action = na.pass)
     bX <- model.matrix.lm(bmf)
 
-    ahat <- bX %*% as.matrix(gammahats)
+    linkinv <- bmodel$family$linkinv
+    ahat <- linkinv(bX %*% as.matrix(gammahats))
     data$yor <- y
     data$yor[r == 0] <- ahat[r == 0]
 
     formulatmp <- update(formula, 'yor ~ .')
 
-    sink(tempfile()) # suppress gee output
-      or <- suppressMessages( # suppress gee messages
-        gee(formulatmp, family = family, data = data, id = id, corstr = corstr)
-        )
-    sink()
+    or <- geem_Vinv(formulatmp, family = family, data = data, id = id, corstr = corstr)
 
     betahats <- coef(or)
     orhat <- as.vector(fitted.values(or))
-    Vk <- or$scale * or$working.correlation # need to generalize this beyond exchangeable, equal clus sizes
+    Vinv <- or$Vinv
     Uhat <- matrix(NA, nrow = length(betahats), ncol = N)
     for (k in 1:K) {
-      ind <- which(id == k)
+      ind <- which(id == ids[k])
       datatmp <- data[ind, ]
       difftmp <- (ahat - orhat)[ind]
-      Dk <- model.matrix.lm(formulatmp, data = datatmp) # need to generalize this beyond Dk = Xk
-      Uhat[, ind] <- t(Dk) %*% solve(Vk) %*% diag(difftmp)
+
+      # Get Vinvk (sub)matrix
+      Vinvk <- Vinv[ind, ind]
+
+      # Get Dk matrix, now generalized beyond Dk=Xk
+      InvLinkDeriv <- famret$mu.eta
+      Xtmp <- model.matrix.lm(formulatmp, data = datatmp)
+      etatmp <- as.vector(Xtmp %*% betahats) # maybe need to change this to work with an offset term
+      Dk <- diag(InvLinkDeriv(etatmp)) %*% Xtmp
+
+      Uhat[, ind] <- as.matrix(t(Dk) %*% Vinvk %*% diag(difftmp))
     }
     etahat <- apply(Uhat, 1, mean)
     Uhats_c[rowStart:rowEnd, ] <- Uhat - etahat
