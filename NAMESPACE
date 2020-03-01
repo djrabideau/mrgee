@@ -3,6 +3,7 @@
 export(geem_Vinv)
 export(modNR)
 export(mrgee)
+export(mrgee_noV)
 export(mrglm)
 export(updateBeta)
 export(updatePhi)
