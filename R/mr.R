@@ -41,8 +41,9 @@
 #'     treatment indicator. List elements must be objects of class "gee" from
 #'     \code{\link[gee]{gee}}.
 #' @export
-mrgee <- function(formula, family = gaussian, data, id, corstr, pmodels,
-                  bmodels, ...) {
+mrgee <- function(formula, family = gaussian, data, id,
+                  corstr = 'independence', corr.mat = NULL, init.phi = 1, scale.fix = F,
+                  pmodels, bmodels, ...) {
   if (is.character(family)) {
       famret <- get(family, mode = "function", envir = parent.frame())
   } else if (is.function(family)) {
@@ -57,7 +58,7 @@ mrgee <- function(formula, family = gaussian, data, id, corstr, pmodels,
   m <- match.call(expand.dots = FALSE)
   m$R <- m$b <- m$tol <- m$maxiter <- m$link <- m$varfun <- m$corstr <- m$Mv <-
     m$silent <- m$contrasts <- m$family <- m$scale.fix <- m$scale.value <-
-    m$v4.4compat <- m$pmodels <- m$bmodels <- m$... <- NULL
+    m$v4.4compat <- m$pmodels <- m$bmodels <- m$... <- m$corr.mat <- m$init.phi <- NULL
   m$na.action <- as.name("na.pass")
   if (is.null(m$id))
     m$id <- as.name("id")
@@ -109,7 +110,8 @@ mrgee <- function(formula, family = gaussian, data, id, corstr, pmodels,
     data$yor <- y
     data$yor[r == 0] <- bhat[r == 0]
     formulatmp <- update(formula, 'yor ~ .')
-    or <- geem_Vinv(formulatmp, family = family, data = data, id = id, corstr = corstr)
+    or <- geem_Vinv(formulatmp, family = family, data = data, id = id, corstr = corstr,
+                    corr.mat = corr.mat, init.phi = init.phi, scale.fix = scale.fix)
     betahats <- coef(or)
 
     # get mu(betahat), which is estimated E(Y|A)
@@ -150,7 +152,8 @@ mrgee <- function(formula, family = gaussian, data, id, corstr, pmodels,
   sumw <- sum(w) # should sum to 1
 
   fit_mr <- geeM::geem(formula = formula, family = family, data = data, id = id,
-                       corstr = corstr, weights = w)
+                       corstr = corstr, corr.mat = corr.mat, init.phi = init.phi,
+                       scale.fix = scale.fix, weights = w)
   coefmr <- coef(fit_mr)
 
   out <- list(

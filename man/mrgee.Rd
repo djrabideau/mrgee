@@ -4,7 +4,8 @@
 \alias{mrgee}
 \title{Multiply Robust GEE}
 \usage{
-mrgee(formula, family = gaussian, data, id, corstr, pmodels, bmodels,
+mrgee(formula, family = gaussian, data, id, corstr = "independence",
+  corr.mat = NULL, init.phi = 1, scale.fix = F, pmodels, bmodels,
   ...)
 }
 \arguments{
