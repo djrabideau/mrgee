@@ -203,10 +203,13 @@ updateV <- function(mu, gamma, alpha, id, corstr, VarFun) {
 #' @param weights vector of weights corresponding to \eqn{y}
 #' @param scale current value of scale parameter
 #' @param corr current value of correlation parameter
+#' @param calcVinv if T, calculates and outputs inverse of entire covariance
+#'      matrix V (note, this calculation could be very slow for correlation
+#'      parameters if cluster sizes are large, say >30 observations/cluster).
 #' @export
 gee.fit <- function(X, y, family, id, corstr,
                     maxiter = 25, tol = 0.001, weights = NULL,
-                    scale, corr) {
+                    scale, corr, calcVinv = F) {
   if (is.character(family)) {
     famret <- get(family, mode = "function", envir = parent.frame())
   } else if (is.function(family)) {
@@ -260,7 +263,7 @@ gee.fit <- function(X, y, family, id, corstr,
     v <- VarFun(mu)
 
     # update matrices
-    D <- Diagonal(N, InvLinkDeriv(etavec)) %*% X
+    D <- as.matrix(Diagonal(N, InvLinkDeriv(etavec)) %*% X)
     V <- updateV(mu, gamma = scale, alpha = corr, id, corstr, VarFun)
 
     # update beta
@@ -276,7 +279,11 @@ gee.fit <- function(X, y, family, id, corstr,
   }
 
   betahat <- as.vector(beta)
-  Vinv <- solve(V)
+  if (calcVinv) {
+    Vinv <- solve(V)
+  } else {
+    Vinv <- NULL
+  }
   out <- list(
     coefficients = betahat,
     X = X,

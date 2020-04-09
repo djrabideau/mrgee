@@ -339,7 +339,8 @@ mrgee.fit <- function(formula, family, data, id, corstr = 'independence',
       yor <- data$yor <- y
       yor[r == 0] <- data$yor[r == 0] <- bhat[r == 0]
       formulatmp <- update(formula, 'yor ~ .')
-      or <- gee.fit(X, yor, family = family, id = id, corstr = corstr, scale = scale, corr = corr)
+      or <- gee.fit(X, yor, family = family, id = id, corstr = corstr,
+                    scale = scale, corr = corr, calcVinv = T)
       betahats <- or$coefficients
 
       # get mu(betahat), which is estimated E(Y|A)
