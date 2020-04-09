@@ -11,6 +11,12 @@
 #' MR-GEEs for each set of parameters (beta, gamma, alpha), corresponding to
 #' parameters for the marginal mean, scales, and correlations, respectively.
 #'
+#' Currently this function is limited to common scalar parameters for scale and
+#' correlation. It also currently assumes propensity score model specified is
+#' for individual probabilities and that joint probabilities are simply product
+#' of individuals (i.e. assuming independence between missingness probabilities
+#' ).
+#'
 #' @seealso \code{\link[mrgee]{mrgee.fit}} for the utility function used to
 #'     solve each MR-GEE
 #'
