@@ -98,3 +98,189 @@ modNR <- function(ghat, r, maxit = 100, eps = 10e-8, quietly = T) {
   )
   return(out)
 }
+
+#' Update parameters of GEE using weighted Newton-Raphson update
+#'
+#' Carries out one step of the usual GEE Newton-Raphson iterative fitting
+#' procedure
+#'
+#' @param beta vector of parameters to update, e.g. \eqn{\beta} for marginal
+#' means, \eqn{\gamma} for scales, \eqn{\alpha} for correlations
+#' @param D matrix of partial derivatives
+#' @param V working covariance matrix
+#' @param W weight matrix
+#' @param y vector of outcomes or residuals, e.g. \eqn{Y[k]}, \eqn{S[k]},
+#' \eqn{Z[k]}
+#' @param mu vector of marginal means, scales, or correlations, e.g.
+#' \eqn{\mu[k]}, \eqn{\phi[k]}, \eqn{\rho[k]}
+#' @param id vector of cluster identifiers
+#' @export
+gee_update <- function(beta, D, V, W, y, mu, id) {
+  p <- length(beta)
+  ids <- unique(id)
+  sumHess <- matrix(0, nrow = p, ncol = p)
+  sumGrad <- matrix(0, nrow = p, ncol = 1)
+  for (i in seq_along(ids)) {
+    idtmp <- ids[i]
+    rows <- which(id == idtmp)
+    Dk <- D[rows, ]
+    Vk <- V[rows, rows]
+    Wk <- W[rows, rows]
+    yk <- y[rows]
+    muk <- mu[rows]
+    Vkinv <- solve(Vk)
+
+    hessk <- t(Dk) %*% Vkinv %*% Wk %*% Dk
+    gradk <- t(Dk) %*% Vkinv %*% Wk %*% (yk - muk)
+
+    sumHess <- sumHess + hessk
+    sumGrad <- sumGrad + gradk
+  }
+  betaNext <- beta + solve(sumHess) %*% sumGrad
+  return(betaNext)
+}
+
+#' Update first-order working covariance
+#'
+#' Updates the entire working covariance matrix \eqn{V[1]} with most recent
+#' second order parameter values, i.e. \eqn{(\gamma, \alpha)}
+#'
+#' @param mu vector of marginal means
+#' @param gamma scale parameters
+#' @param alpha correlation parameters
+#' @param id vector of cluster identifiers
+#' @param corstr a character string specifying the correlation structure.
+#' Allowed structures are: "independence" and "exchangeable"
+#' @param VarFun function: the variance as a function of the mean
+#' @export
+updateV <- function(mu, gamma, alpha, id, corstr, VarFun) {
+  muvec <- as.vector(mu)
+  ids <- unique(id)
+  N <- length(id)
+  blocks <- list()
+  for (i in seq_along(ids)) {
+    idtmp <- ids[i]
+    rows <- which(id == idtmp)
+    nk <- length(rows)
+    muvectmp <- muvec[rows]
+    Akhalf <- Diagonal(nk, sqrt(VarFun(muvectmp)))
+    Ck <- Diagonal(nk)
+    if (corstr == 'exchangeable') {
+      Ck[upper.tri(Ck)] <- alpha
+      Ck[lower.tri(Ck)] <- alpha
+    }
+    blocks[[i]] <- gamma * (Akhalf %*% Ck %*% Akhalf)
+  }
+  V <- bdiag(blocks)
+  return(V)
+}
+
+#' Fit weighted GEE (point estimates only)
+#'
+#' This utility function fits a weighted GEE and returns parameter point
+#' estimates, design matrix, and inverse of the working covariance matrix. We
+#' solve for the regression parameters only; scale and correlation parameters
+#' are assumed fixed at their given values. Note, this function can be used to
+#' solve for second-order regression parameters such as scales or correlations;
+#' in that case, scale and corr arguments of this function correspond to even
+#' higher-order parameters (e.g. third and fourth moment quantities).
+#'
+#' @param X design matrix
+#' @param y outcome vector
+#' @param family a description of the error distribution and link function to
+#'     be used in the model. This can be a character string naming a family
+#'     function, a family function or the result of a call to a family function.
+#'     See \code{\link[stats]{family}} for details.
+#' @param id a vector which identifies the clusters. The length of \code{id}
+#'     should be the same as the number of observations. Data are assumed to be
+#'     sorted so that observations on a cluster are contiguous rows for all
+#'     entities in the formula.
+#' @param corstr  character string specifying the correlation structure. Allowed
+#'     structures are: "independence", "exchangeable"
+#' @param maxiter maximum Newton-Raphson updates of GEE parameters.
+#' @param tol convergence tolerance for final GEE updates. Maximum absolute
+#'      difference between step (s-1) and (s) across all parameter values.
+#' @param weights vector of weights corresponding to \eqn{y}
+#' @param scale current value of scale parameter
+#' @param corr current value of correlation parameter
+#' @export
+gee.fit <- function(X, y, family, id, corstr,
+                    maxiter = 25, tol = 0.001, weights = NULL,
+                    scale, corr) {
+  if (is.character(family)) {
+    famret <- get(family, mode = "function", envir = parent.frame())
+  } else if (is.function(family)) {
+    famret <- family()
+  } else if (is.null(family$family)) {
+    print(family)
+    stop("'family' not recognized")
+  }
+  LinkFun <- famret$linkfun
+  InvLink <- famret$linkinv
+  VarFun <- famret$variance
+  InvLinkDeriv <- famret$mu.eta
+
+  # check supported corstr
+  if (!(corstr %in% c('independence', 'exchangeable'))) {
+    stop(paste0('corstr = ', corstr, ' not supported'))
+  }
+
+  # weights
+  if (is.null(weights))
+    weights <- ifelse(is.na(y), 0, 1)
+  w <- weights
+  sumw <- sum(w)
+
+  # drop 0 weights
+  dropRows <- which(weights == 0)
+  if (length(dropRows) > 0) {
+    X <- X[-dropRows, ]
+    y <- y[-dropRows]
+    id <- id[-dropRows]
+    w <- w[-dropRows]
+  }
+
+  # setup data
+  N <- length(y) # total number of observations
+  ids <- unique(id) # unique cluster ids
+  K <- length(ids) # total number of clusters
+  p <- ncol(X)
+  W <- Diagonal(N, w)
+
+  # init betahat
+  fit0 <- glm.fit(X, y, family = famret, weights = w)
+  beta <- as.matrix(coef(fit0))
+
+  # iteratively solve GEE
+  for (i in 1:maxiter) {
+    # calculate mu, eta, v, e for most recent updates
+    eta <- as.matrix(X %*% beta)
+    etavec <- as.vector(eta)
+    mu <- InvLink(eta)
+    v <- VarFun(mu)
+
+    # update matrices
+    D <- Diagonal(N, InvLinkDeriv(etavec)) %*% X
+    V <- updateV(mu, gamma = scale, alpha = corr, id, corstr, VarFun)
+
+    # update beta
+    beta.last <- beta
+    beta <- gee_update(beta, D, V, W, y, mu, id)
+
+    # check convergence
+    if (max(abs(beta - beta.last)) < tol) {
+      break
+    } else if (i == maxiter) {
+      warning(paste0('init.betahat did not converge after ', i, ' iterations'))
+    }
+  }
+
+  betahat <- as.vector(beta)
+  Vinv <- solve(V)
+  out <- list(
+    coefficients = betahat,
+    X = X,
+    Vinv = Vinv
+  )
+  return(out)
+}

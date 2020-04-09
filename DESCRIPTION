@@ -16,5 +16,6 @@ Imports:
     stats,
     gee,
     geepack,
-    geeM
+    geeM,
+    Matrix
 RoxygenNote: 6.1.1
