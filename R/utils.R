@@ -115,7 +115,7 @@ modNR <- function(ghat, r, maxit = 100, eps = 10e-8, quietly = T) {
 #' \eqn{\mu[k]}, \eqn{\phi[k]}, \eqn{\rho[k]}
 #' @param id vector of cluster identifiers
 #' @export
-gee_update <- function(beta, D, V, W, y, mu, id) {
+gee_update <- function(beta, D, V, W, y, mu, id, noInv) {
   p <- length(beta)
   ids <- unique(id)
   sumHess <- matrix(0, nrow = p, ncol = p)
@@ -128,7 +128,11 @@ gee_update <- function(beta, D, V, W, y, mu, id) {
     Wk <- W[rows, rows]
     yk <- y[rows]
     muk <- mu[rows]
-    Vkinv <- solve(Vk)
+    if (!noInv) {
+      Vkinv <- solve(Vk)
+    } else {
+    Vkinv <- Vk
+    }
 
     hessk <- t(Dk) %*% Vkinv %*% Wk %*% Dk
     gradk <- t(Dk) %*% Vkinv %*% Wk %*% (yk - muk)
@@ -265,10 +269,17 @@ gee.fit <- function(X, y, family, id, corstr,
     # update matrices
     D <- as.matrix(Diagonal(N, InvLinkDeriv(etavec)) %*% X)
     V <- updateV(mu, gamma = scale, alpha = corr, id, corstr, VarFun)
+    # if V is identity matrix, no need to slow things down by taking inverse
+    # when doing gee_update below (i.e. when fitting scale and corr params)
+    if (corstr == 'independence' & scale == 1) {
+      noInv <- T
+    } else {
+      noInv <- F
+    }
 
     # update beta
     beta.last <- beta
-    beta <- gee_update(beta, D, V, W, y, mu, id)
+    beta <- gee_update(beta, D, V, W, y, mu, id, noInv)
 
     # check convergence
     if (max(abs(beta - beta.last)) < tol) {

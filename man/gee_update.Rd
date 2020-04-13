@@ -4,7 +4,7 @@
 \alias{gee_update}
 \title{Update parameters of GEE using weighted Newton-Raphson update}
 \usage{
-gee_update(beta, D, V, W, y, mu, id)
+gee_update(beta, D, V, W, y, mu, id, noInv)
 }
 \arguments{
 \item{beta}{vector of parameters to update, e.g. \eqn{\beta} for marginal
