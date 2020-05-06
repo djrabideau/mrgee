@@ -7,7 +7,7 @@
 mrgee(formula, family = gaussian, data, id, corstr = "independence",
   scale.fix = F, pmodels = NULL, bmodels = NULL, smodels = NULL,
   cmodels = NULL, init.gamma = 1, init.alpha = 0.01, maxiter = 1,
-  tol = 0.001)
+  tol = 0.001, printIter = F)
 }
 \arguments{
 \item{formula}{an object of class "\code{\link[stats]{formula}}"
@@ -55,6 +55,8 @@ gamma, alpha).}
 \item{tol}{convergence tolerance for final MR-GEE updates. Maximum absolute
 difference between step (s-1) and (s) across all parameter updates (
 i.e. all betas, gamma, alpha) is compared to tol.}
+
+\item{printIter}{logical whether to print iteration information}
 }
 \description{
 Fits a multiply robust generalized estimating equation (MR-GEE) using

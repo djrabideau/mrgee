@@ -255,8 +255,9 @@ gee.fit <- function(X, y, family, id, corstr,
   W <- Diagonal(N, w)
 
   # init betahat
-  fit0 <- glm.fit(X, y, family = famret, weights = w)
+  fit0 <- suppressWarnings(glm.fit(X, y, family = famret, weights = w))
   beta <- as.matrix(coef(fit0))
+  # ...suppressWarnings when binary and non-integer predicted values for miss outcomes
 
   # iteratively solve GEE
   for (i in 1:maxiter) {

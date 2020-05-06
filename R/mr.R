@@ -52,11 +52,13 @@
 #' @param tol convergence tolerance for final MR-GEE updates. Maximum absolute
 #'      difference between step (s-1) and (s) across all parameter updates (
 #'      i.e. all betas, gamma, alpha) is compared to tol.
+#' @param printIter logical whether to print iteration information
 #' @export
 mrgee <- function(formula, family = gaussian, data, id,
                   corstr = 'independence', scale.fix = F,
                   pmodels = NULL, bmodels = NULL, smodels = NULL, cmodels = NULL,
-                  init.gamma = 1, init.alpha = 0.01, maxiter = 1, tol = 0.001) {
+                  init.gamma = 1, init.alpha = 0.01, maxiter = 1, tol = 0.001,
+                  printIter = F) {
   # basic checks
   if (length(pmodels) == 0 &
       (length(bmodels) == 0 | length(smodels) == 0 | length(cmodels) == 0))
@@ -82,7 +84,7 @@ mrgee <- function(formula, family = gaussian, data, id,
     m$silent <- m$contrasts <- m$family <- m$scale.fix <- m$scale.value <-
     m$v4.4compat <- m$pmodels <- m$bmodels <- m$smodels <- m$cmodels <- m$... <-
     m$corr.mat <- m$init.phi <- m$init.gamma <- m$init.alpha <- m$maxiter <-
-    m$tol <- NULL
+    m$tol <- m$printIter <- NULL
   m$na.action <- as.name("na.pass")
   if (is.null(m$id))
     m$id <- as.name("id")
@@ -117,7 +119,7 @@ mrgee <- function(formula, family = gaussian, data, id,
   betas <- matrix(NA, nrow = nrow(beta), ncol = 0)
   gammas <- c()
   alphas <- c()
-  for (i in 1:maxiter) {
+  for (it in 1:maxiter) {
     # previous values
     beta.last <- beta
     gamma.last <- gamma
@@ -174,18 +176,25 @@ mrgee <- function(formula, family = gaussian, data, id,
     betas <- cbind(betas, beta)
 
     # check convergence
+    converged <- NA
     if (maxiter > 1) {
       beta_diff <- max(abs(beta - beta.last))
       gamma_diff <- abs(gamma - gamma.last)
       alpha_diff <- abs(alpha - alpha.last)
       diffs <- c(beta_diff, gamma_diff, alpha_diff)
+      if (printIter)
+        print(round(c(beta, gamma, alpha, beta_diff, gamma_diff, alpha_diff), 5))
       if (max(diffs) < tol) {
+        converged <- T
         break
-      } else if (i == maxiter) {
-        print(paste0('beta_diff = ', round(beta_diff, 5)))
-        print(paste0('gamma_diff = ', round(gamma_diff, 5)))
-        print(paste0('alpha_diff = ', round(alpha_diff, 5)))
-        warning(paste0('did not converge after ', i, ' iterations'))
+      } else if (it == maxiter) {
+        if (printIter) {
+          print(paste0('beta_diff = ', round(beta_diff, 5)))
+          print(paste0('gamma_diff = ', round(gamma_diff, 5)))
+          print(paste0('alpha_diff = ', round(alpha_diff, 5)))
+        }
+        converged <- F
+        warning(paste0('did not converge after ', it, ' iterations'))
       }
     }
   }
@@ -204,7 +213,8 @@ mrgee <- function(formula, family = gaussian, data, id,
     fit = betaFit,
     coefficients = betaOut,
     gamma = gamma,
-    alpha = alpha
+    alpha = alpha,
+    converged = converged # NA means only 1 iter, F means didn't, T means did
   )
   class(out) <- 'mrgee'
   return(out)
