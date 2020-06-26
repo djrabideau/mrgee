@@ -62,7 +62,7 @@ mrgee <- function(formula, family = gaussian, data, id,
   # basic checks
   if (length(pmodels) == 0 &
       (length(bmodels) == 0 | length(smodels) == 0 | length(cmodels) == 0))
-    stop("need at least one pmodel or one of each bmodel, smodel, and cmodel")
+    warning("no pmodel, bmodel, smodel, or cmodel specified")
 
   if (is.character(family)) {
       famret <- get(family, mode = "function", envir = parent.frame())
@@ -254,9 +254,6 @@ mrgee <- function(formula, family = gaussian, data, id,
 mrgee.fit <- function(formula, family, data, id, corstr = 'independence',
                       pmodels = NULL, bmodels = NULL, scale, corr, jointP = F,
                       indiv_id = NULL, ...) {
-  # basic checks
-  if (length(pmodels) + length(bmodels) == 0)
-    stop("need at least one pmodel or bmodel")
 
   if (is.character(family)) {
     famret <- get(family, mode = "function", envir = parent.frame())
@@ -385,12 +382,18 @@ mrgee.fit <- function(formula, family, data, id, corstr = 'independence',
 
   ghat <- rbind(pihats_c, Uhats_c)
 
-  # modified Newton-Raphson
-  modNR_results <- modNR(ghat, r, ...)
-  rhohat <- modNR_results$rhohat
+  if (!is.null(ghat)) {
+    # modified Newton-Raphson
+    modNR_results <- modNR(ghat, r, ...)
+    rhohat <- modNR_results$rhohat
+    rhohat_converged <- modNR_results$converged
 
-  # weighted GEE
-  w <- data$w <- as.vector((1 / M) * (1 / (1 + t(rhohat) %*% ghat))) * r
+    # weighted GEE
+    w <- data$w <- as.vector((1 / M) * (1 / (1 + t(rhohat) %*% ghat))) * r
+  } else { # if no models provided, unconstrained maximization results in this:
+    rhohat <- rhohat_converged <- NULL
+    w <- data$w <- (1 / M) * r
+  }
   sumw <- sum(w) # should sum to 1
 
   fit_mr <- gee.fit(X, y, family = family, id = id, corstr = corstr,
@@ -401,7 +404,7 @@ mrgee.fit <- function(formula, family, data, id, corstr = 'independence',
     call = call,
     ghat = ghat,
     rhohat = rhohat,
-    rhohat_converged = modNR_results$converged,
+    rhohat_converged = rhohat_converged,
     weights = w,
     sumw = sumw,
     fit = fit_mr,
