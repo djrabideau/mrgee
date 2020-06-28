@@ -167,15 +167,15 @@ updateV <- function(mu, gamma, alpha, id, corstr, VarFun) {
     rows <- which(id == idtmp)
     nk <- length(rows)
     muvectmp <- muvec[rows]
-    Akhalf <- Diagonal(nk, sqrt(VarFun(muvectmp)))
-    Ck <- Diagonal(nk)
+    Akhalf <- Matrix::Diagonal(nk, sqrt(VarFun(muvectmp)))
+    Ck <- Matrix::Diagonal(nk)
     if (corstr == 'exchangeable') {
       Ck[upper.tri(Ck)] <- alpha
       Ck[lower.tri(Ck)] <- alpha
     }
     blocks[[i]] <- gamma * (Akhalf %*% Ck %*% Akhalf)
   }
-  V <- bdiag(blocks)
+  V <- Matrix::bdiag(blocks)
   return(V)
 }
 
@@ -252,7 +252,7 @@ gee.fit <- function(X, y, family, id, corstr,
   ids <- unique(id) # unique cluster ids
   K <- length(ids) # total number of clusters
   p <- ncol(X)
-  W <- Diagonal(N, w)
+  W <- Matrix::Diagonal(N, w)
 
   # init betahat
   fit0 <- suppressWarnings(glm.fit(X, y, family = famret, weights = w))
@@ -268,7 +268,7 @@ gee.fit <- function(X, y, family, id, corstr,
     v <- VarFun(mu)
 
     # update matrices
-    D <- as.matrix(Diagonal(N, InvLinkDeriv(etavec)) %*% X)
+    D <- as.matrix(Matrix::Diagonal(N, InvLinkDeriv(etavec)) %*% X)
     V <- updateV(mu, gamma = scale, alpha = corr, id, corstr, VarFun)
     # if V is identity matrix, no need to slow things down by taking inverse
     # when doing gee_update below (i.e. when fitting scale and corr params)
