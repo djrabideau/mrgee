@@ -5,23 +5,21 @@
 \title{Multiply Robust GEE}
 \usage{
 mrgee(formula, family = gaussian, data, id, corstr = "independence",
-  corr.mat = NULL, init.phi = 1, scale.fix = F, pmodels, bmodels,
-  ...)
+  scale.fix = F, pmodels = NULL, bmodels = NULL, smodels = NULL,
+  cmodels = NULL, init.gamma = 1, init.alpha = 0.01, maxiter = 1,
+  tol = 0.001, printIter = F)
 }
 \arguments{
 \item{formula}{an object of class "\code{\link[stats]{formula}}"
 (or one that can be coerced to that class): a symbolic description of the
-model to be fitted. This argument is passed to
-\code{\link[geeM]{geem}}}
+model to be fitted.}
 
 \item{family}{a description of the error distribution and link function to
 be used in the model. This can be a character string naming a family
 function, a family function or the result of a call to a family function.
-This argument is passed to \code{\link[geeM]{geem}}. See
-\code{\link[stats]{family}} for details.}
+See \code{\link[stats]{family}} for details.}
 
-\item{data}{a data frame containing the variables in the model. This argument
-is passed to \code{\link[geeM]{geem}}}
+\item{data}{a data frame containing the variables in the model.}
 
 \item{id}{a vector which identifies the clusters. The length of \code{id}
 should be the same as the number of observations. Data are assumed to be
@@ -29,10 +27,9 @@ sorted so that observations on a cluster are contiguous rows for all
 entities in the formula.}
 
 \item{corstr}{character string specifying the correlation structure. Allowed
-structures are: "independence", "exchangeable", "ar1", "m-dependent",
-"unstructured", "fixed", and "userdefined". Any unique substring may be
-supplied. If "fixed" or "userdefined", then corr.mat must be specified. If
-"m-dependent", then Mv is relevant.}
+structures are: "independence", "exchangeable"}
+
+\item{scale.fix}{if T, then the scale parameter is fixed at init.gamma}
 
 \item{pmodels}{a list of propensity score models for \eqn{Pr(R=1|X, A)}, where
 \eqn{R} indicates outcome observance, X are fully observed baseline
@@ -44,19 +41,43 @@ is the outcome, X are fully observed baseline covariates, and A is the
 treatment indicator. List elements must be objects of class "gee" from
 \code{\link[gee]{gee}}.}
 
-\item{...}{further arguments passed to \code{\link[mrgee]{modNR}}.}
+\item{smodels}{a list of outcome models for \eqn{var(Y|X, A)}}
 
-\item{Mv}{for "m-dependent", the value for m.}
+\item{cmodels}{a list of outcome models for \eqn{corr(Y, Y'|X, A)}}
+
+\item{init.gamma}{initial scale parameter value}
+
+\item{init.alpha}{initial correlation parameter value}
+
+\item{maxiter}{maximum Newton-Raphson updates of MR-GEE parameters (beta,
+gamma, alpha).}
+
+\item{tol}{convergence tolerance for final MR-GEE updates. Maximum absolute
+difference between step (s-1) and (s) across all parameter updates (
+i.e. all betas, gamma, alpha) is compared to tol.}
+
+\item{printIter}{logical whether to print iteration information}
 }
 \description{
 Fits a multiply robust generalized estimating equation (MR-GEE) using
 empirical maximum likelihood to handle missing outcomes.
 }
 \details{
-This function inputs a model formula as well as lists of propensity score
-models and outcome regression models to carry out MR-GEE. It outputs model
-fit information including empirical MLEs for the coefficients. The weighted
-GEE is fit using \code{\link[geeM]{geem}}, which ensures consistency of this
-weighted estimator, rather than the conventional  implementation in PROC
-GENMOD for example.
+This function inputs a model formula, a list of propensity score models, and
+lists of outcome regression models for the marginal means, scales, and
+correlations to carry out MR-GEE. It outputs model fit information including
+empirical MLEs for first- and second-order parameters (beta, gamma, alpha).
+This function iteratively calls \code{\link[mrgee]{mrgee.fit}} to solve
+MR-GEEs for each set of parameters (beta, gamma, alpha), corresponding to
+parameters for the marginal mean, scales, and correlations, respectively.
+
+Currently this function is limited to common scalar parameters for scale and
+correlation. It also currently assumes propensity score model specified is
+for individual probabilities and that joint probabilities are simply product
+of individuals (i.e. assuming independence between missingness probabilities
+).
+}
+\seealso{
+\code{\link[mrgee]{mrgee.fit}} for the utility function used to
+    solve each MR-GEE
 }
